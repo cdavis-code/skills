@@ -4,6 +4,20 @@ A collection of agent skills providing tailored instructions for common developm
 
 Skills are essentially simple folders of files that can be seen as complementary to MCP, where MCP gives an agent access to specialized tools and a skill teaches the agent how to use those tools for a specific task.
 
+## Table of Contents
+
+- [Installation](#installation)
+- [Updating Skills](#updating-skills)
+- [Available Skills](#available-skills)
+  - [easy_mcp_add-server-annotations](#easy_mcp_add-server-annotations)
+  - [obs-mcp](#obs-mcp)
+  - [opencode_api-api-usage](#opencode_api-api-usage)
+- [Getting Started](#getting-started)
+- [Repository Structure](#repository-structure)
+- [Contributing](#contributing)
+- [Code of Conduct](#code-of-conduct)
+- [License](#license)
+
 ## Installation
 
 To install all skills into your project, run the following command. The `--agent universal` flag puts them in the standard `.agents/skills` folder that most agents use.
