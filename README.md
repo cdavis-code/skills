@@ -40,18 +40,6 @@ To update all installed skills, run:
 npx skills update
 ```
 
-## Contributing
-
-Please see [CONTRIBUTING.md](CONTRIBUTING.md) for information on how to contribute to this repository.
-
-## Code of Conduct
-
-Please see [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for our code of conduct.
-
-## License
-
-This project is licensed under the BSD License - see the [LICENSE](LICENSE) file for details.
-
 ## Available Skills
 
 ### easy_mcp_add-server-annotations
@@ -117,3 +105,15 @@ skills/
 ```
 
 Each skill is a folder containing a `SKILL.md` file with detailed instructions for the AI agent on how to perform specific tasks.
+
+## Contributing
+
+Please see [CONTRIBUTING.md](CONTRIBUTING.md) for information on how to contribute to this repository.
+
+## Code of Conduct
+
+Please see [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for our code of conduct.
+
+## License
+
+This project is licensed under the BSD License - see the [LICENSE](LICENSE) file for details.
