@@ -40,9 +40,46 @@ This project is licensed under the BSD License - see the [LICENSE](LICENSE) file
 
 ## Available Skills
 
-| Skill | Description | Example prompt |
-| --- | --- | --- |
-| *Add your skills here* | *Description of what the skill does* | *Example of how to trigger the skill* |
+### easy_mcp_add-server-annotations
+
+Add `@Server`, `@Tool`, and `@Parameter` annotations to existing Dart code to expose methods as MCP tools or REST API endpoints.
+
+**When to use:** Converting Dart libraries to MCP/REST servers, adding tool exposure to existing functions, or making Dart code callable via the Model Context Protocol or HTTP APIs.
+
+**Installation:**
+```bash
+npx skills add cdavis-code/skills --skill easy_mcp_add-server-annotations --agent universal
+```
+
+### obs-mcp
+
+Control a running OBS Studio instance through the obs-mcp-stdio MCP server. Exposes 60+ tools for scenes, sources, audio, streaming, recording, and more.
+
+**When to use:** Connecting to OBS, listing/switching scenes, transforming sources, controlling audio inputs, starting/stopping streaming or recording, triggering hotkeys, or running any OBS WebSocket operation.
+
+**Installation:**
+```bash
+npx skills add cdavis-code/skills --skill obs-mcp --agent universal
+```
+
+### opencode_api-api-usage
+
+Work with the opencode_api package to send prompts to opencode server and interpret the message response structure.
+
+**When to use:** Integrating with opencode.ai server API, sending prompts to sessions, processing responses with text/reasoning/tool parts, or building tools that interact with opencode programmatically.
+
+**Installation:**
+```bash
+npx skills add cdavis-code/skills --skill opencode_api-api-usage --agent universal
+```
+
+### Install All Skills
+
+To install all skills at once:
+
+```bash
+npx skills add cdavis-code/skills --skill '*' --agent universal
+```
 
 ## Getting Started
 
