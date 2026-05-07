@@ -6,17 +6,40 @@ Skills are essentially simple folders of files that can be seen as complementary
 
 ## Table of Contents
 
+- [Quick Start](#quick-start)
+- [Features](#features)
 - [Installation](#installation)
 - [Updating Skills](#updating-skills)
 - [Available Skills](#available-skills)
   - [easy_mcp_add-server-annotations](#easy_mcp_add-server-annotations)
   - [obs-mcp](#obs-mcp)
   - [opencode_api-api-usage](#opencode_api-api-usage)
-- [Getting Started](#getting-started)
 - [Repository Structure](#repository-structure)
+- [External Resources](#external-resources)
 - [Contributing](#contributing)
 - [Code of Conduct](#code-of-conduct)
 - [License](#license)
+
+## Quick Start
+
+Install a skill and let your AI agent do the rest:
+
+```bash
+# Install the OBS skill
+npx skills add cdavis-code/skills --skill obs-mcp --agent universal
+
+# Now ask your AI: "Start recording in OBS"
+```
+
+Your AI agent will automatically discover the skill and follow its instructions.
+
+## Features
+
+- **AI-ready instructions** - Skills teach your AI agent how to use tools correctly
+- **Best practices built-in** - Reduce mistakes with proven workflows
+- **Easy installation** - One command to add skills to any project
+- **IDE agnostic** - Works with Cursor, Claude Code, GitHub Copilot, and more
+- **Complements MCP** - Skills teach the "how", MCP provides the "what"
 
 ## Installation
 
@@ -75,28 +98,16 @@ Work with the opencode_api package to send prompts to opencode server and interp
 npx skills add cdavis-code/skills --skill opencode_api-api-usage --agent universal
 ```
 
-### Install All Skills
-
-To install all skills at once:
-
-```bash
-npx skills add cdavis-code/skills --skill '*' --agent universal
-```
-
-## Getting Started
-
-1. Browse the available skills in the table above
-2. Install the skills you need using the installation command
-3. The skills will be available in your `.agents/skills` directory
-4. Your AI agent will automatically discover and use them when appropriate
-
 ## Repository Structure
 
 ```
 skills/
-├── SKILL_NAME_1/
+├── easy_mcp_add-server-annotations/
 │   └── SKILL.md
-├── SKILL_NAME_2/
+├── obs-mcp/
+│   ├── SKILL.md
+│   └── scripts/
+├── opencode_api-api-usage/
 │   └── SKILL.md
 ├── README.md
 ├── LICENSE
@@ -104,7 +115,12 @@ skills/
 └── CONTRIBUTING.md
 ```
 
-Each skill is a folder containing a `SKILL.md` file with detailed instructions for the AI agent on how to perform specific tasks.
+Each skill is a folder containing a `SKILL.md` file with detailed instructions for the AI agent on how to perform specific tasks. Some skills also include helper scripts, references, or assets.
+
+## External Resources
+
+- [Agent Skills Specification](https://agentskills.io/specification) - The standard for AI agent skills
+- [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) - Learn about MCP servers and tools
 
 ## Contributing
 
