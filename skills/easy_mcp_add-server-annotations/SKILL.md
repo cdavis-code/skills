@@ -1,15 +1,15 @@
 ---
 name: easy_mcp_add-server-annotations
-description: Add easy_api annotations (@Server, @Tool, @Parameter) to existing Dart code to expose methods as MCP tools or REST API endpoints. Use when converting Dart libraries to MCP/REST servers, adding tool exposure to existing functions, or when the user wants to make their Dart code callable via the Model Context Protocol or HTTP APIs.
+description: Add easy_api annotations (@Server, @Tool, @Parameter, @Prompt) to existing Dart code to expose methods as MCP tools, REST API endpoints, or CLI applications. Use when converting Dart libraries to MCP/REST/CLI servers, adding tool exposure to existing functions, or when the user wants to make their Dart code callable via the Model Context Protocol, HTTP APIs, or command-line interfaces.
 ---
 
 # Add Easy API Annotations to Dart Code
 
-Convert existing Dart methods into MCP tools or REST API endpoints using easy_api annotations.
+Convert existing Dart methods into MCP tools, REST API endpoints, or CLI applications using easy_api annotations.
 
 ## Overview
 
-This skill helps you add `@Server`, `@Tool`, and `@Parameter` annotations to existing Dart code, transforming it into an MCP server and/or REST API that can be called by AI assistants, MCP clients, or HTTP consumers.
+This skill helps you add `@Server`, `@Tool`, `@Parameter`, and `@Prompt` annotations to existing Dart code, transforming it into an MCP server, REST API, and/or CLI application that can be called by AI assistants, MCP clients, HTTP consumers, or shell users.
 
 > **Note:** `@Mcp` is still available as a deprecated typedef for backward compatibility. New code should use `@Server`.
 
@@ -33,11 +33,16 @@ Marks the entry point for MCP server and/or REST API generation.
   generateJson: false,            // generate .mcp.json metadata file (default: false)
   generateMcp: true,              // generate .mcp.dart MCP server (default: true)
   generateRest: false,            // generate .openapi.json + .openapi.dart REST server (default: false)
+  generateCli: false,             // generate .cli.dart CLI application (default: false)
   codeMode: false,                // enable JavaScript sandbox for batch tool orchestration (default: false)
   codeModeTimeout: 30,            // max execution time for code mode in seconds (default: 30)
   toolPrefix: 'api_',             // prefix all tool names (optional)
   autoClassPrefix: true,          // prefix with class name (optional)
   logErrors: false,               // log errors to stderr for debugging (default: false)
+  corsOrigins: ['*'],             // allowed CORS origins for HTTP transport (default: ['*'])
+  annotationsDefault: ToolAnnotations(  // server-wide defaults for tool annotations (optional)
+    openWorldHint: false,
+  ),
 )
 ```
 
@@ -48,11 +53,14 @@ Marks the entry point for MCP server and/or REST API generation.
 - `generateJson`: Whether to generate .mcp.json metadata file (default: false)
 - `generateMcp`: Whether to generate .mcp.dart MCP server (default: true)
 - `generateRest`: Whether to generate .openapi.json spec and .openapi.dart REST server (default: false)
+- `generateCli`: Whether to generate a .cli.dart command-line application using `package:args` `CommandRunner` (default: false). Each annotated class becomes a kebab-case command group, each `@Tool` method becomes a subcommand, and parameters become `--kebab-case` CLI options. Complex parameters accept JSON inline or via `@file.json`
+- `corsOrigins`: Allowed CORS origins for HTTP transport (default: `['*']`). Only used when `transport: McpTransport.http`. For production deployments, restrict to specific origins to prevent CSRF attacks
 - `codeMode`: Enable JavaScript sandbox for batch tool orchestration (default: **false**). Set to `true` to enable code mode with `search` and `execute` tools
 - `codeModeTimeout`: Max execution time for code mode in seconds (default: 30, only when codeMode: true)
 - `toolPrefix`: Prefix added to all tool names (e.g., 'user_' makes 'createUser' → 'user_createUser')
 - `autoClassPrefix`: Automatically prefix tool names with class name (e.g., `UserService_createUser`)
 - `logErrors`: Log internal errors to stderr for debugging (default: false)
+- `annotationsDefault`: Server-wide default values for the 4 boolean tool annotation hints. When set, `readOnlyHint`, `destructiveHint`, `idempotentHint`, and `openWorldHint` are applied as defaults to every generated tool. Individual tools can override any hint via their own `@Tool(annotations: ToolAnnotations(...))`. The `title` field is never inherited from server defaults.
 
 ### @Tool
 Marks a method as an MCP tool and/or REST API endpoint.
@@ -62,6 +70,11 @@ Marks a method as an MCP tool and/or REST API endpoint.
   name: 'user_create',  // Custom tool name (optional, defaults to method name)
   description: 'Creates a new user in the system',
   icons: ['https://example.com/icon.png'],   // Optional icon URLs for visual identification
+  annotations: ToolAnnotations(              // Optional behavioral hints for MCP clients
+    destructiveHint: false,
+    idempotentHint: false,
+    openWorldHint: false,
+  ),
   codeMode: true,                            // Available in code mode sandbox (default: true)
   codeModeVisible: false,                    // Listed in tools/list when codeMode enabled (default: false)
 )
@@ -71,29 +84,137 @@ Marks a method as an MCP tool and/or REST API endpoint.
 - `name`: Optional custom tool name (defaults to method name). Useful for avoiding naming collisions
 - `description`: Human-readable description (uses dartdoc if omitted)
 - `icons`: Optional list of icon URLs for UI clients
+- `annotations`: Optional `ToolAnnotations` instance providing behavioral hints to MCP clients
 - `codeMode`: Whether tool is available in code mode sandbox (default: true). Set to false for destructive operations
 - `codeModeVisible`: Whether tool appears in tools/list when codeMode is enabled (default: false). Set to true to pin specific tools to the standard tool list
+
+### ToolAnnotations (Optional)
+Provides behavioral hints that inform MCP clients how a tool functions.
+
+```dart
+ToolAnnotations(
+  title: 'Get User',           // Human-readable display title
+  readOnlyHint: true,          // Tool does not modify its environment (default when omitted: false)
+  destructiveHint: false,      // Tool may perform destructive updates (default when omitted: true)
+  idempotentHint: true,        // Repeated calls with same args have no additional effect (default when omitted: false)
+  openWorldHint: false,        // Tool interacts with external entities (default when omitted: true)
+)
+```
+
+**Properties (all optional hints):**
+- `title`: Human-readable display title for the tool
+- `readOnlyHint`: If true, tool does not modify its environment (default: false when omitted)
+- `destructiveHint`: If true, tool may perform destructive updates (default: true when omitted — conservative)
+- `idempotentHint`: If true, repeated calls with same args have no additional effect (default: false when omitted)
+- `openWorldHint`: If true, tool interacts with external entities like APIs (default: true when omitted)
+
+> **Important:** All annotation properties are _hints_. Clients should not rely on them for security decisions.
+
+### Server-Wide Annotation Defaults
+
+When most tools follow the same annotation pattern, set server-wide defaults via `annotationsDefault` on `@Server` to reduce boilerplate:
+
+```dart
+@Server(
+  transport: McpTransport.stdio,
+  annotationsDefault: ToolAnnotations(
+    openWorldHint: false,  // applied to ALL tools by default
+  ),
+)
+class TodoService {
+  @Tool(description: 'List all todos')
+  // inherits openWorldHint: false from server
+  Future<List<Todo>> listTodos() async { ... }
+
+  @Tool(
+    description: 'Create a new todo',
+    annotations: ToolAnnotations(
+      destructiveHint: false,  // overrides server default for this hint only
+      // openWorldHint: false is still inherited from server
+    ),
+  )
+  Future<Todo> createTodo({required String title}) async { ... }
+}
+```
+
+**Merge Rules:**
+- Tool-level `ToolAnnotations` values always take precedence over server defaults for the same key
+- The `title` field is never inherited from server defaults (it's tool-specific)
+- If neither server defaults nor tool-level annotations exist for a tool, no annotations are emitted
+- Only the 4 boolean hints (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`) cascade from server defaults
 
 ### @Parameter (Optional)
 Provides rich metadata for individual parameters.
 
 ```dart
 @Parameter(
+  alias: 'email',               // Custom external name (optional)
   title: 'Email Address',
   description: 'A valid email address',
   example: 'user@example.com',
   pattern: r'^[\w\.-]+@[\w\.-]+\.\w+$',
+  maxLength: 254,               // Maximum string length
 )
 ```
 
 **Parameters:**
+- `alias`: Custom external name for this parameter (used in REST APIs, MCP schemas, and OpenAPI specs instead of the Dart parameter name)
 - `title`: Human-readable parameter name
 - `description`: Detailed explanation
 - `example`: Example value for guidance
 - `minimum`/`maximum`: Numeric validation bounds
 - `pattern`: Regex pattern for string validation
+- `maxLength`: Maximum length for string parameters
 - `sensitive`: Mark as sensitive (passwords, API keys)
 - `enumValues`: List of allowed values
+
+### @Prompt (MCP Prompts)
+User-invoked templates that generate structured messages for interacting with language models. Unlike `@Tool` methods (which are model-called), prompts are explicitly selected by users, typically as slash commands in MCP clients like Claude Desktop.
+
+```dart
+@Prompt(
+  title: 'Code Review',
+  description: 'Asks the LLM to analyze code quality and suggest improvements',
+)
+PromptResult codeReview({
+  @PromptArgument(
+    title: 'Source Code',
+    description: 'The code to review for quality and issues',
+  )
+  required String code,
+}) {
+  return PromptResult(
+    description: 'Code review prompt',
+    messages: [
+      PromptMessage(
+        role: PromptRole.user,
+        content: TextPromptContent(
+          'Please review this code:\n\n```\n$code\n```',
+        ),
+      ),
+    ],
+  );
+}
+```
+
+**`@Prompt` Parameters:**
+- `name`: Custom prompt name (defaults to method name)
+- `title`: Human-readable title shown in MCP clients
+- `description`: Description of what the prompt does (uses dartdoc if omitted)
+
+**`@PromptArgument` Parameters:**
+- `alias`: Custom external name for the argument
+- `title`: Human-readable label displayed in clients
+- `description`: Detailed explanation of the argument
+- `required`: Whether the argument is required (default: inferred from nullability — non-nullable parameters are required)
+
+**Content Types for `PromptMessage`:**
+- `TextPromptContent` — Plain text messages
+- `ImagePromptContent` — Base64-encoded images with MIME type
+- `AudioPromptContent` — Base64-encoded audio with MIME type
+- `ResourcePromptContent` — Embedded server-side resources with URI and MIME type
+
+**Important Limitation:** Libraries containing **only** prompts (no `@Tool` methods) must be explicitly imported in the file with the `@Server` annotation. The generator extracts prompts from imported libraries, but only if those libraries are already imported for other reasons.
 
 ## Workflow
 
@@ -129,6 +250,7 @@ import 'package:easy_api_annotations/mcp_annotations.dart';
   transport: McpTransport.stdio,
   generateMcp: true,    // Generate MCP server
   generateRest: false,  // Set true to also generate REST API
+  generateCli: false,   // Set true to also generate CLI application
   // codeMode: false is the default - all tools will be listed in tools/list
 )
 class UserService {
@@ -253,6 +375,7 @@ This generates:
 - `{file}.mcp.json` - Tool metadata (when `generateJson: true`)
 - `{file}.openapi.json` - OpenAPI 3.0 REST specification (when `generateRest: true`)
 - `{file}.openapi.dart` - Complete REST API server (when `generateRest: true`)
+- `{file}.cli.dart` - Command-line application using `package:args` `CommandRunner` (when `generateCli: true`)
 
 > **Note on Code Mode**: By default, `codeMode: false` means all your `@Tool` methods will be listed in the standard `tools/list` response and directly callable by MCP clients. To enable code mode (which hides tools behind `search` and `execute` orchestration tools), explicitly set `codeMode: true` on `@Server`.
 
@@ -278,29 +401,59 @@ dart run bin/your_file.mcp.dart
   transport: McpTransport.http,
   port: 8080,
   generateRest: true,  // Also generate REST API
+  annotationsDefault: ToolAnnotations(
+    openWorldHint: false,  // all tools inherit this by default
+  ),
 )
 class TodoService {
-  @Tool(description: 'List all todos')
+  @Tool(
+    description: 'List all todos',
+    annotations: ToolAnnotations(readOnlyHint: true),
+    // openWorldHint: false inherited from server
+  )
   Future<List<Todo>> listTodos() async { ... }
-  
-  @Tool(description: 'Get a todo by ID')
+
+  @Tool(
+    description: 'Get a todo by ID',
+    annotations: ToolAnnotations(readOnlyHint: true),
+    // openWorldHint: false inherited from server
+  )
   Future<Todo?> getTodo(String id) async { ... }
-  
-  @Tool(description: 'Create a new todo')
+
+  @Tool(
+    description: 'Create a new todo',
+    annotations: ToolAnnotations(
+      destructiveHint: false,
+      idempotentHint: false,
+      // openWorldHint: false inherited from server
+    ),
+  )
   Future<Todo> createTodo({
     @Parameter(title: 'Title', example: 'Buy groceries')
     required String title,
-    
+
     @Parameter(title: 'Priority', enumValues: ['low', 'medium', 'high'])
     String priority = 'medium',
   }) async { ... }
-  
-  @Tool(description: 'Update an existing todo')
+
+  @Tool(
+    description: 'Update an existing todo',
+    annotations: ToolAnnotations(
+      destructiveHint: false,
+      idempotentHint: true,
+      // openWorldHint: false inherited from server
+    ),
+  )
   Future<Todo> updateTodo(String id, {String? title, bool? completed}) async { ... }
-  
+
   @Tool(
     description: 'Delete a todo',
     codeMode: false,  // Disable from code mode for safety
+    annotations: ToolAnnotations(
+      destructiveHint: true,
+      idempotentHint: true,
+      // openWorldHint: false inherited from server
+    ),
   )
   Future<void> deleteTodo(String id) async { ... }
 }
@@ -348,7 +501,7 @@ class StringUtils {
 
 ## Best Practices
 
-1. **Start Simple**: Begin with `@Server()` and `@Tool()` only, add `@Parameter` later if needed
+1. **Start Simple**: Begin with `@Server()` and `@Tool()` only, add `@Parameter` and `ToolAnnotations` later if needed
 2. **Default is No Code Mode**: By default `codeMode: false`, all tools are directly visible and callable in `tools/list`
 3. **Enable Code Mode Intentionally**: Only set `codeMode: true` when you want LLM-driven batch orchestration via JavaScript sandbox
 4. **Use dartdoc**: Write good doc comments; they become tool descriptions automatically
@@ -358,6 +511,14 @@ class StringUtils {
 8. **Avoid Naming Collisions**: Use `autoClassPrefix: true` when multiple classes have methods with the same name, or use `toolPrefix` to organize tools by domain
 9. **Protect Destructive Operations**: Use `@Tool(codeMode: false)` for delete/update operations when code mode is enabled
 10. **Enable REST API**: Set `generateRest: true` on `@Server` to automatically generate OpenAPI spec and REST server
+11. **Annotate Tool Behavior**: Use `ToolAnnotations` to inform clients about side-effects:
+    - Mark read-only tools with `readOnlyHint: true` so clients can auto-approve them
+    - Mark destructive tools with `destructiveHint: true` so clients prompt for confirmation
+    - Set `openWorldHint: false` for tools that only interact with local/closed systems
+    - Set `idempotentHint: true` for safe-to-retry operations (e.g., PUT-style updates)
+12. **Use Server-Wide Defaults**: When most tools share the same annotation hints, set `annotationsDefault` on `@Server` to reduce boilerplate. Individual tools can still override specific hints.
+13. **Generate CLI for Shell Users**: Set `generateCli: true` on `@Server` to generate a `package:args` `CommandRunner`-based CLI application. Classes become kebab-case command groups, `@Tool` methods become subcommands, and parameters become `--kebab-case` options. Output is pretty-printed JSON by default; `--compact` emits single-line JSON for piping.
+14. **Ship Multiple Artifacts**: Set `generateMcp`, `generateRest`, and `generateCli` together on the same `@Server` to serve AI agents, traditional HTTP clients, and shell users from a single annotated source.
 
 ## Troubleshooting
 
@@ -383,6 +544,7 @@ When converting existing code:
 - [ ] Add `@Parameter` for complex parameter validation (optional)
 - [ ] Configure `toolPrefix` or `autoClassPrefix` if needed to avoid naming collisions
 - [ ] Set `generateRest: true` if you want REST API generation
+- [ ] Set `generateCli: true` if you want CLI application generation
 - [ ] Set `codeMode: true` if you want JavaScript sandbox for batch orchestration
 - [ ] Run `dart run build_runner build`
 - [ ] Test the generated server(s)
