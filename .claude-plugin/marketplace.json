@@ -1,0 +1,40 @@
+{
+  "name": "cdavis-code-skills",
+  "description": "Agent skills for common development workflows: MCP servers, OBS, vision APIs, and PostForge.",
+  "owner": {
+    "name": "Chris Davis",
+    "url": "https://github.com/cdavis-code"
+  },
+  "plugins": [
+    {
+      "name": "easy_mcp_add-server-annotations",
+      "source": "./skills/easy_mcp_add-server-annotations",
+      "description": "Add easy_api annotations to Dart code to expose methods as MCP tools or REST API endpoints."
+    },
+    {
+      "name": "obs-mcp",
+      "source": "./skills/obs-mcp",
+      "description": "Control a running OBS Studio instance through the obs-mcp-stdio MCP server."
+    },
+    {
+      "name": "opencode_api-api-usage",
+      "source": "./skills/opencode_api-api-usage",
+      "description": "Send prompts to an opencode server and interpret the message response structure."
+    },
+    {
+      "name": "postforge-publishing",
+      "source": "./skills/postforge-publishing",
+      "description": "Draft and schedule LinkedIn posts with PostForge, attaching a source as evidence."
+    },
+    {
+      "name": "using-google-vision",
+      "source": "./skills/using-google-vision",
+      "description": "Use Google Cloud Vision in Dart/Flutter for image detection, OCR, and content moderation."
+    },
+    {
+      "name": "using-vision-mcp",
+      "source": "./skills/using-vision-mcp",
+      "description": "Analyze images through the Vision MCP server: OCR, label, face, and object detection."
+    }
+  ]
+}
