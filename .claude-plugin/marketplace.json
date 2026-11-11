@@ -1,6 +1,6 @@
 {
   "name": "cdavis-code-skills",
-  "description": "Agent skills for common development workflows: MCP servers, OBS, vision APIs, and PostForge.",
+  "description": "Agent skills for common development workflows: MCP servers, OBS, vision APIs, and PointAndProof.",
   "owner": {
     "name": "Chris Davis",
     "url": "https://github.com/cdavis-code"
@@ -22,9 +22,9 @@
       "description": "Send prompts to an opencode server and interpret the message response structure."
     },
     {
-      "name": "postforge-publishing",
-      "source": "./skills/postforge-publishing",
-      "description": "Draft and schedule LinkedIn posts with PostForge, attaching a source as evidence."
+      "name": "pointandproof-publishing",
+      "source": "./skills/pointandproof-publishing",
+      "description": "Draft and schedule LinkedIn posts with PointAndProof, attaching a source as evidence."
     },
     {
       "name": "using-google-vision",

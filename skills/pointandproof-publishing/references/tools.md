@@ -1,6 +1,6 @@
-# PostForge MCP tool reference
+# PointAndProof MCP tool reference
 
-Every tool maps one-to-one onto an HTTP route in the PostForge API, so the same
+Every tool maps one-to-one onto an HTTP route in the PointAndProof API, so the same
 validation, credit rules, and state gates apply in a harness as in the web app.
 The workflows, the human-in-the-loop contract, and the two starting points
 (from an article, from the expert's brief) live in [`../SKILL.md`](../SKILL.md).

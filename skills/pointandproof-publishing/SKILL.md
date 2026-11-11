@@ -1,15 +1,15 @@
 ---
-name: postforge-publishing
-description: Turn what an expert knows into a LinkedIn post with PostForge, attaching a source as evidence. Use when the user asks to draft, review, or schedule a LinkedIn post with PostForge ("generate a post for review around my topics", "find an article and draft a LinkedIn post", "draft a post from my expertise", "post this on Monday"). Enforces the human-in-the-loop contract: nothing publishes without an explicit approval instruction.
+name: pointandproof-publishing
+description: Turn what an expert knows into a LinkedIn post with PointAndProof, attaching a source as evidence. Use when the user asks to draft, review, or schedule a LinkedIn post with PointAndProof ("generate a post for review around my topics", "find an article and draft a LinkedIn post", "draft a post from my expertise", "post this on Monday"). Enforces the human-in-the-loop contract: nothing publishes without an explicit approval instruction.
 ---
 
-# PostForge Publishing
+# PointAndProof Publishing
 
-PostForge turns what the expert knows into a LinkedIn post, with a source attached as evidence. There are two starting points: **from an article** (react to a source you or PostForge found) and **from your expertise** (start with what you know, then attach a source). Both go through the **postforge MCP server**. The server is hosted inside the PostForge API itself at `POST /mcp` (MCP Streamable HTTP), and its tools call the same code paths the web app uses, so every validation, credit rule, and human-in-the-loop (HIL) pause behaves exactly like the app.
+PointAndProof turns what the expert knows into a LinkedIn post, with a source attached as evidence. There are two starting points: **from an article** (react to a source you or PointAndProof found) and **from your expertise** (start with what you know, then attach a source). Both go through the **pointandproof MCP server**. The server is hosted inside the PointAndProof API itself at `POST /mcp` (MCP Streamable HTTP), and its tools call the same code paths the web app uses, so every validation, credit rule, and human-in-the-loop (HIL) pause behaves exactly like the app.
 
 ## Setup
 
-Mint an API token in the app under **Settings → MCP access** (create, then copy the `pf_...` value — it is shown once). A client that cannot send an `Authorization` header can connect with OAuth instead: the server publishes its metadata, registers the client, shows a consent page where the user picks the scope, and issues the same kind of `pf_...` token. Both kinds appear in the same list and stop working the moment one is revoked. Headless alternative (admin-only), replacing `<tenant-id>` with the tenant from the `tenants` table:
+Mint an API token in the app under **Settings → MCP access** (create, then copy the `pp_...` value — it is shown once). A client that cannot send an `Authorization` header can connect with OAuth instead: the server publishes its metadata, registers the client, shows a consent page where the user picks the scope, and issues the same kind of `pp_...` token. Both kinds appear in the same list and stop working the moment one is revoked. Headless alternative (admin-only), replacing `<tenant-id>` with the tenant from the `tenants` table:
 
 ```bash
 cd saas/api && .venv/bin/python -c "
@@ -26,21 +26,21 @@ asyncio.run(main())
 "
 ```
 
-The token prints once (`pf_...`); only its hash is stored, so it can never be shown again. It acts as the user — including approving and publishing posts.
+The token prints once (`pp_...`); only its hash is stored, so it can never be shown again. It acts as the user — including approving and publishing posts.
 
-**Connect your harness.** PostForge is a remote Streamable HTTP MCP server: add the deployed origin (`https://<your-domain>/mcp`; local: `http://localhost:8000/mcp`) with an `Authorization: Bearer pf_...` header in your harness's MCP settings. The repository README's **Install in your harness** section has the file or command for Claude Code, Qoder, Cursor, VS Code/Copilot, and Codex, plus the `mcp-remote` bridge for harnesses that only support stdio.
+**Connect your harness.** PointAndProof is a remote Streamable HTTP MCP server: add the deployed origin (`https://<your-domain>/mcp`; local: `http://localhost:8000/mcp`) with an `Authorization: Bearer pp_...` header in your harness's MCP settings. The repository README's **Install in your harness** section has the file or command for Claude Code, Qoder, Cursor, VS Code/Copilot, and Codex, plus the `mcp-remote` bridge for harnesses that only support stdio.
 
-If the `postforge` tools are not in your tool list, the server is not connected yet — installation is the step before this skill can run. Never paste the token into chat or commit it to the repository. A `draft-only` token covers drafting and review; `full` is only for approving or publishing.
+If the `pointandproof` tools are not in your tool list, the server is not connected yet — installation is the step before this skill can run. Never paste the token into chat or commit it to the repository. A `draft-only` token covers drafting and review; `full` is only for approving or publishing.
 
 A generic `mcpServers` entry:
 
 ```json
 {
   "mcpServers": {
-    "postforge": {
+    "pointandproof": {
       "type": "http",
       "url": "http://localhost:8000/mcp",
-      "headers": { "Authorization": "Bearer pf_<token>" }
+      "headers": { "Authorization": "Bearer pp_<token>" }
     }
   }
 }
@@ -64,13 +64,13 @@ The user's name goes on every post. These rules override convenience:
 
 ## Voice setup: train the writing voice
 
-When the user asks PostForge to learn how they write ("train my voice on these posts", "set up my writing voice"), work through this ladder. It needs a `draft-only` token or better; nothing here publishes.
+When the user asks PointAndProof to learn how they write ("train my voice on these posts", "set up my writing voice"), work through this ladder. It needs a `draft-only` token or better; nothing here publishes.
 
 1. **Discover.** `list_voice_profiles()`. If a sample-capable profile already exists (`source_type` is not `"preset"`), reuse it; otherwise `create_voice_profile(name=...)`. `create_voice_profile` also accepts `editorial_preferences` (see step 4) when the user has already stated formatting preferences. Never add samples to a preset profile — it is refused ("Preset profiles do not accept samples. Create a custom profile instead."). If the user only wants a known style, `create_voice_profile(source_type="preset", preset_key=...)` activates immediately and skips the rest of this section.
 2. **Collect 3–10 samples.** `add_writing_sample(profile_id, text)` is text-only; get the text one of three ways, in this order:
    - **Paste** — the user pastes a post; pass it through.
-   - **Workspace file** — the user names a file; read it with your file tools and pass the text. (The MCP server runs inside the PostForge API container and cannot reach the user's disk.)
-   - **URL** — fetch the page with **your own** web tool and pass the text. PostForge makes no outbound request for a user-supplied URL.
+   - **Workspace file** — the user names a file; read it with your file tools and pass the text. (The MCP server runs inside the PointAndProof API container and cannot reach the user's disk.)
+   - **URL** — fetch the page with **your own** web tool and pass the text. PointAndProof makes no outbound request for a user-supplied URL.
    Truncate to 8,000 characters per sample; set `sample_kind` to `article` for articles and `linkedin_post` for posts. Aim for 3–10 samples, ideally all in the user's own voice. On "An identical sample already exists." report it and move on — do not retry the same text.
 3. **Analyze and review.** Once at least 3 samples are active, `analyze_voice(profile_id)` — it blocks on one LLM round-trip and is rate-limited (6 per hour per tenant). Present the returned `style_guide` and the profile's sample previews (`get_voice_profile`) to the user, ask whether the result sounds like them, and refine before activation. This is the agent-side equivalent of the web's guided voice review; do not activate a profile the user has not seen.
 4. **Refine and manage (optional).** `update_voice_profile(profile_id, ...)` changes the guide, instructions, name, or editorial preferences — patch semantics: pass only the fields to change. Edits shape every future draft immediately; re-running analysis supersedes guide edits. Editorial preferences are user choices, not model inferences, and survive re-analysis:
@@ -121,10 +121,10 @@ There is no saved-take menu and no suggested interpretation in this mode. The vo
 
 When a run is parked at `awaiting_approval`, the user's name is about to go on a public post — this is the step that matters most. Work through it in order:
 
-1. **Present.** The source (title + link), the full draft in a quoted block, and — when `get_run` carries validation notes — a short "automated checks" line, labelled honestly (formatting and quality checks, not fact-checking). A claim check, when run, is labelled separately as a comparison with the selected source, not as fact-checking. With file tools, also write the draft to `postforge-draft-<run_id>.md` in the workspace and give the user the path — the editable copy is part of the presentation, not an option to request later.
+1. **Present.** The source (title + link), the full draft in a quoted block, and — when `get_run` carries validation notes — a short "automated checks" line, labelled honestly (formatting and quality checks, not fact-checking). A claim check, when run, is labelled separately as a comparison with the selected source, not as fact-checking. With file tools, also write the draft to `pointandproof-draft-<run_id>.md` in the workspace and give the user the path — the editable copy is part of the presentation, not an option to request later.
    When `get_run` carries `expertise_brief`, put a **Your brief** block above the draft: the kind and the five labelled answers, then the active voice and its editorial preferences. Say plainly that the attached source is evidence, not the subject. The brief is read-only once the run starts — to change it, the user edits the draft or cancels and starts again.
-2. **Offer the review options once.** Approve as-is, edit, or run a claim check first (paid plans; the verdicts are stored on the draft) — where editing means: change `postforge-draft-<run_id>.md` and say when it is ready, or describe the changes in chat. Always name the file path in the offer when you wrote one. Do not re-offer on every turn.
-3. **Take edits.** When the user says the file is ready, read it back and apply the text. Chat edits: apply as described and re-present the full text. Where the client supports a pop-up form, `edit_draft(run_id)` offers it — today's hosted transport answers `{"supported": false}` immediately, so never wait on it; a `{"cancelled": true}` result means the user backed out and nothing changed. Re-write `postforge-draft-<run_id>.md` whenever the draft text changes so the file always matches the current draft, and delete it once the run is approved or abandoned.
+2. **Offer the review options once.** Approve as-is, edit, or run a claim check first (paid plans; the verdicts are stored on the draft) — where editing means: change `pointandproof-draft-<run_id>.md` and say when it is ready, or describe the changes in chat. Always name the file path in the offer when you wrote one. Do not re-offer on every turn.
+3. **Take edits.** When the user says the file is ready, read it back and apply the text. Chat edits: apply as described and re-present the full text. Where the client supports a pop-up form, `edit_draft(run_id)` offers it — today's hosted transport answers `{"supported": false}` immediately, so never wait on it; a `{"cancelled": true}` result means the user backed out and nothing changed. Re-write `pointandproof-draft-<run_id>.md` whenever the draft text changes so the file always matches the current draft, and delete it once the run is approved or abandoned.
 4. **Image step — before any approval.** Mirror the web's review controls. Never generate without explicit opt-in (it is paid spend).
    - If `get_run` shows `generate_image: true`, an image is already generated (or still generating): call `get_image` to present it — on the "still generating" error, wait a few seconds and retry; generation usually completes within a minute. Offer the web's controls: "Generate alternate (N left)" via `generate_image(run_id)` (the reply's `remaining` is N — when regenerating, poll `get_image` again), or remove it (text-only).
    - If no image was requested, **ask explicitly**: "Want an AI-generated image to accompany this post?" — it requires an active subscription. On opt-in: `generate_image(run_id)`, then poll `get_image` until it returns the picture, and present it with the same regenerate/remove controls. On a refusal like "Image generation is available on paid plans.", say so plainly and continue text-only.
