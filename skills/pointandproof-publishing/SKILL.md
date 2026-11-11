@@ -1,15 +1,15 @@
 ---
 name: pointandproof-publishing
-description: Turn what an expert knows into a LinkedIn post with PointAndProof, attaching a source as evidence. Use when the user asks to draft, review, or schedule a LinkedIn post with PointAndProof ("generate a post for review around my topics", "find an article and draft a LinkedIn post", "draft a post from my expertise", "post this on Monday"). Enforces the human-in-the-loop contract: nothing publishes without an explicit approval instruction.
+description: 'Turn what an expert knows into a LinkedIn post with Point & Proof, attaching a source as evidence. Use when the user asks to draft, review, or schedule a LinkedIn post with Point & Proof ("generate a post for review around my topics", "find an article and draft a LinkedIn post", "draft a post from my expertise", "post this on Monday"). Enforces the human-in-the-loop contract: nothing publishes without an explicit approval instruction.'
 ---
 
-# PointAndProof Publishing
+# Point & Proof Publishing
 
-PointAndProof turns what the expert knows into a LinkedIn post, with a source attached as evidence. There are two starting points: **from an article** (react to a source you or PointAndProof found) and **from your expertise** (start with what you know, then attach a source). Both go through the **pointandproof MCP server**. The server is hosted inside the PointAndProof API itself at `POST /mcp` (MCP Streamable HTTP), and its tools call the same code paths the web app uses, so every validation, credit rule, and human-in-the-loop (HIL) pause behaves exactly like the app.
+Point & Proof turns what the expert knows into a LinkedIn post, with a source attached as evidence. There are two starting points: **from an article** (react to a source you or Point & Proof found) and **from your expertise** (start with what you know, then attach a source). Both go through the **pointandproof MCP server**. The server is hosted inside the Point & Proof API itself at `POST /mcp` (MCP Streamable HTTP), and its tools call the same code paths the web app uses, so every validation, credit rule, and human-in-the-loop (HIL) pause behaves exactly like the app.
 
 ## Setup
 
-Mint an API token in the app under **Settings → MCP access** (create, then copy the `pp_...` value — it is shown once). A client that cannot send an `Authorization` header can connect with OAuth instead: the server publishes its metadata, registers the client, shows a consent page where the user picks the scope, and issues the same kind of `pp_...` token. Both kinds appear in the same list and stop working the moment one is revoked. Headless alternative (admin-only), replacing `<tenant-id>` with the tenant from the `tenants` table:
+Mint an API token in the app under **Settings → MCP access** (create, then copy the `pf_...` value — it is shown once). A client that cannot send an `Authorization` header can connect with OAuth instead: the server publishes its metadata, registers the client, shows a consent page where the user picks the scope, and issues the same kind of `pf_...` token. Both kinds appear in the same list and stop working the moment one is revoked. Headless alternative (admin-only), replacing `<tenant-id>` with the tenant from the `tenants` table:
 
 ```bash
 cd saas/api && .venv/bin/python -c "
@@ -26,9 +26,9 @@ asyncio.run(main())
 "
 ```
 
-The token prints once (`pp_...`); only its hash is stored, so it can never be shown again. It acts as the user — including approving and publishing posts.
+The token prints once (`pf_...`); only its hash is stored, so it can never be shown again. It acts as the user — including approving and publishing posts.
 
-**Connect your harness.** PointAndProof is a remote Streamable HTTP MCP server: add the deployed origin (`https://<your-domain>/mcp`; local: `http://localhost:8000/mcp`) with an `Authorization: Bearer pp_...` header in your harness's MCP settings. The repository README's **Install in your harness** section has the file or command for Claude Code, Qoder, Cursor, VS Code/Copilot, and Codex, plus the `mcp-remote` bridge for harnesses that only support stdio.
+**Connect your harness.** Point & Proof is a remote Streamable HTTP MCP server: add the deployed origin (`https://<your-domain>/mcp`; local: `http://localhost:8000/mcp`) with an `Authorization: Bearer pf_...` header in your harness's MCP settings. The repository README's **Install in your harness** section has the file or command for Claude Code, Qoder, Cursor, VS Code/Copilot, and Codex, plus the `mcp-remote` bridge for harnesses that only support stdio.
 
 If the `pointandproof` tools are not in your tool list, the server is not connected yet — installation is the step before this skill can run. Never paste the token into chat or commit it to the repository. A `draft-only` token covers drafting and review; `full` is only for approving or publishing.
 
@@ -40,7 +40,7 @@ A generic `mcpServers` entry:
     "pointandproof": {
       "type": "http",
       "url": "http://localhost:8000/mcp",
-      "headers": { "Authorization": "Bearer pp_<token>" }
+      "headers": { "Authorization": "Bearer pf_<token>" }
     }
   }
 }
@@ -64,13 +64,13 @@ The user's name goes on every post. These rules override convenience:
 
 ## Voice setup: train the writing voice
 
-When the user asks PointAndProof to learn how they write ("train my voice on these posts", "set up my writing voice"), work through this ladder. It needs a `draft-only` token or better; nothing here publishes.
+When the user asks Point & Proof to learn how they write ("train my voice on these posts", "set up my writing voice"), work through this ladder. It needs a `draft-only` token or better; nothing here publishes.
 
 1. **Discover.** `list_voice_profiles()`. If a sample-capable profile already exists (`source_type` is not `"preset"`), reuse it; otherwise `create_voice_profile(name=...)`. `create_voice_profile` also accepts `editorial_preferences` (see step 4) when the user has already stated formatting preferences. Never add samples to a preset profile — it is refused ("Preset profiles do not accept samples. Create a custom profile instead."). If the user only wants a known style, `create_voice_profile(source_type="preset", preset_key=...)` activates immediately and skips the rest of this section.
 2. **Collect 3–10 samples.** `add_writing_sample(profile_id, text)` is text-only; get the text one of three ways, in this order:
    - **Paste** — the user pastes a post; pass it through.
-   - **Workspace file** — the user names a file; read it with your file tools and pass the text. (The MCP server runs inside the PointAndProof API container and cannot reach the user's disk.)
-   - **URL** — fetch the page with **your own** web tool and pass the text. PointAndProof makes no outbound request for a user-supplied URL.
+   - **Workspace file** — the user names a file; read it with your file tools and pass the text. (The MCP server runs inside the Point & Proof API container and cannot reach the user's disk.)
+   - **URL** — fetch the page with **your own** web tool and pass the text. Point & Proof makes no outbound request for a user-supplied URL.
    Truncate to 8,000 characters per sample; set `sample_kind` to `article` for articles and `linkedin_post` for posts. Aim for 3–10 samples, ideally all in the user's own voice. On "An identical sample already exists." report it and move on — do not retry the same text.
 3. **Analyze and review.** Once at least 3 samples are active, `analyze_voice(profile_id)` — it blocks on one LLM round-trip and is rate-limited (6 per hour per tenant). Present the returned `style_guide` and the profile's sample previews (`get_voice_profile`) to the user, ask whether the result sounds like them, and refine before activation. This is the agent-side equivalent of the web's guided voice review; do not activate a profile the user has not seen.
 4. **Refine and manage (optional).** `update_voice_profile(profile_id, ...)` changes the guide, instructions, name, or editorial preferences — patch semantics: pass only the fields to change. Edits shape every future draft immediately; re-running analysis supersedes guide edits. Editorial preferences are user choices, not model inferences, and survive re-analysis:
